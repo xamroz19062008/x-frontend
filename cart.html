@@ -30,11 +30,24 @@
           <a href="/cart.html">Корзина</a>
         </nav>
 
-        <div class="auth-links">
-          <a href="https://x-54uc.onrender.com/login/">Войти</a>
-          <a href="https://x-54uc.onrender.com/signup/">Регистрация</a>
-          <a href="https://x-54uc.onrender.com/account/">Аккаунт</a>
-          <a href="https://x-54uc.onrender.com/logout/">Выйти</a>
+        <div class="auth-links" id="auth-links">
+          <a id="link-login" href="https://x-54uc.onrender.com/login/">Войти</a>
+          <a id="link-signup" href="https://x-54uc.onrender.com/signup/"
+            >Регистрация</a
+          >
+
+          <a
+            id="link-account"
+            href="https://x-54uc.onrender.com/account/"
+            style="display: none"
+            >Аккаунт</a
+          >
+          <a
+            id="link-logout"
+            href="https://x-54uc.onrender.com/logout/"
+            style="display: none"
+            >Выйти</a
+          >
         </div>
       </div>
     </header>
@@ -247,6 +260,41 @@
       });
 
       renderCart();
+    </script>
+    <script>
+      function renderAuthLinks() {
+        const isLogged = localStorage.getItem("tp_logged_in") === "1";
+
+        document.getElementById("link-login").style.display = isLogged
+          ? "none"
+          : "inline";
+        document.getElementById("link-signup").style.display = isLogged
+          ? "none"
+          : "inline";
+
+        document.getElementById("link-account").style.display = isLogged
+          ? "inline"
+          : "none";
+        document.getElementById("link-logout").style.display = isLogged
+          ? "inline"
+          : "none";
+      }
+
+      // Если вернулся с бэкенда после логина/регистрации: ?logged=1
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("logged") === "1") {
+        localStorage.setItem("tp_logged_in", "1");
+        // убираем параметр из адреса
+        window.history.replaceState({}, "", window.location.pathname);
+      }
+
+      // Если нажали "Выйти" — чистим флаг (переход на Django logout всё равно произойдет)
+      const logoutLink = document.getElementById("link-logout");
+      logoutLink.addEventListener("click", () => {
+        localStorage.removeItem("tp_logged_in");
+      });
+
+      renderAuthLinks();
     </script>
   </body>
 </html>

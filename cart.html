@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Корзина — TIMEPIECE</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- ✅ CSS для Vercel -->
+    <link rel="stylesheet" href="/css/style.css" />
+
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      crossorigin=""
+    />
+
+    <script>
+      // ✅ Render backend
+      const API_BASE = "https://x-54uc.onrender.com";
+    </script>
+  </head>
+
+  <body>
+    <header class="header glass-panel">
+      <div class="container header-inner">
+        <a href="/index.html" class="logo">TIMEPIECE</a>
+
+        <nav class="nav">
+          <a href="/catalog.html">Каталог</a>
+          <a href="/cart.html">Корзина</a>
+        </nav>
+
+        <div class="auth-links">
+          <a href="https://x-54uc.onrender.com/login/">Войти</a>
+          <a href="https://x-54uc.onrender.com/signup/">Регистрация</a>
+          <a href="https://x-54uc.onrender.com/account/">Аккаунт</a>
+          <a href="https://x-54uc.onrender.com/logout/">Выйти</a>
+        </div>
+      </div>
+    </header>
+
+    <main class="section">
+      <div class="container">
+        <div
+          class="glass-panel"
+          style="padding: 32px; max-width: 960px; margin: 0 auto"
+        >
+          <h1 class="section-title" style="margin-bottom: 24px">Корзина</h1>
+
+          <div id="cart-empty" style="display: none">
+            <p>Ваша корзина пуста.</p>
+          </div>
+
+          <div id="cart-content" style="display: none">
+            <table class="cart-table">
+              <thead>
+                <tr>
+                  <th>Модель</th>
+                  <th>Цена</th>
+                  <th>Количество</th>
+                  <th>Итого</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="cart-body"></tbody>
+            </table>
+
+            <div class="cart-total mono" style="margin-top: 16px">
+              Сумма заказа: <span id="cart-total">0</span> сум
+            </div>
+
+            <!-- ===== ОФОРМЛЕНИЕ ===== -->
+            <div class="checkout-block" style="margin-top: 40px">
+              <h2 class="section-title" style="font-size: 24px">Оформление</h2>
+
+              <div class="form-row" style="margin-bottom: 16px">
+                <label>Адрес:</label>
+                <input
+                  id="location"
+                  type="text"
+                  placeholder="Введите адрес"
+                  required
+                />
+              </div>
+
+              <div class="form-row" style="margin-bottom: 16px">
+                <label>Телефон:</label>
+                <input id="phone" type="text" placeholder="+998..." required />
+              </div>
+
+              <p class="mono">Выберите точку на карте:</p>
+              <div
+                id="map"
+                style="
+                  width: 100%;
+                  height: 320px;
+                  border-radius: 16px;
+                  margin-bottom: 16px;
+                "
+              ></div>
+
+              <button id="checkout-btn" class="btn btn-primary" disabled>
+                ПЕРЕЙТИ К ОПЛАТЕ
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+      /* ===== CART ===== */
+      function getCart() {
+        return JSON.parse(localStorage.getItem("timepiece_cart") || "[]");
+      }
+
+      function setCart(cart) {
+        localStorage.setItem("timepiece_cart", JSON.stringify(cart));
+        renderCart();
+      }
+
+      function renderCart() {
+        const cart = getCart();
+        const body = document.getElementById("cart-body");
+        const empty = document.getElementById("cart-empty");
+        const content = document.getElementById("cart-content");
+        const totalEl = document.getElementById("cart-total");
+
+        body.innerHTML = "";
+
+        if (cart.length === 0) {
+          empty.style.display = "block";
+          content.style.display = "none";
+          return;
+        }
+
+        empty.style.display = "none";
+        content.style.display = "block";
+
+        let total = 0;
+
+        cart.forEach((item, index) => {
+          const sum = item.price * item.quantity;
+          total += sum;
+
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>
+              <div style="display:flex;gap:12px;align-items:center">
+                <img src="${item.image_url}" style="width:52px;height:52px;border-radius:12px;object-fit:cover">
+                <div>${item.name}</div>
+              </div>
+            </td>
+            <td>${item.price} сум</td>
+            <td>
+              <button onclick="changeQty(${index}, -1)">−</button>
+              ${item.quantity}
+              <button onclick="changeQty(${index}, 1)">+</button>
+            </td>
+            <td>${sum} сум</td>
+            <td><a href="#" onclick="removeItem(${index})">Удалить</a></td>
+          `;
+          body.appendChild(tr);
+        });
+
+        totalEl.textContent = total;
+      }
+
+      function changeQty(i, delta) {
+        const cart = getCart();
+        cart[i].quantity += delta;
+        if (cart[i].quantity <= 0) cart.splice(i, 1);
+        setCart(cart);
+      }
+
+      function removeItem(i) {
+        const cart = getCart();
+        cart.splice(i, 1);
+        setCart(cart);
+      }
+
+      /* ===== MAP ===== */
+      let lat = null;
+      let lng = null;
+
+      const map = L.map("map").setView([41.3111, 69.2797], 12);
+      let marker = null;
+
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(
+        map
+      );
+
+      map.on("click", function (e) {
+        lat = e.latlng.lat;
+        lng = e.latlng.lng;
+
+        if (!marker) {
+          marker = L.marker([lat, lng]).addTo(map);
+        } else {
+          marker.setLatLng([lat, lng]);
+        }
+
+        validateCheckout();
+      });
+
+      /* ===== CHECKOUT ===== */
+      const locationInput = document.getElementById("location");
+      const phoneInput = document.getElementById("phone");
+      const btn = document.getElementById("checkout-btn");
+
+      function validateCheckout() {
+        btn.disabled = !(
+          locationInput.value.trim() &&
+          phoneInput.value.trim() &&
+          lat &&
+          lng
+        );
+      }
+
+      locationInput.addEventListener("input", validateCheckout);
+      phoneInput.addEventListener("input", validateCheckout);
+
+      btn.addEventListener("click", async () => {
+        const cart = getCart();
+
+        const res = await fetch(`${API_BASE}/api/orders/create/`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            location: locationInput.value,
+            phone: phoneInput.value,
+            latitude: lat,
+            longitude: lng,
+            items: cart,
+          }),
+        });
+
+        if (res.ok) {
+          localStorage.removeItem("timepiece_cart");
+          alert("Заказ успешно отправлен!");
+          window.location.href = "/index.html";
+        } else {
+          alert("Ошибка оформления заказа");
+        }
+      });
+
+      renderCart();
+    </script>
+  </body>
+</html>

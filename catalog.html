@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <title>TIMEPIECE — полный каталог часов в Ташкенте</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- ✅ CSS для Vercel -->
+    <link rel="stylesheet" href="/css/style.css" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Manrope:wght@300;400;500;600&family=JetBrains+Mono:wght@400&display=swap"
+      rel="stylesheet"
+    />
+
+    <script>
+      // ✅ ТВОЙ Render backend
+      const API_BASE = "https://x-54uc.onrender.com";
+    </script>
+  </head>
+
+  <body>
+    <header class="header glass-panel">
+      <div class="container header-inner">
+        <a href="/index.html" class="logo">TIMEPIECE</a>
+
+        <nav class="nav">
+          <a href="/index.html#collection">Коллекция</a>
+          <a href="/index.html#about">О нас</a>
+          <a href="/index.html#service">Сервис</a>
+          <a href="/index.html#contacts">Контакты</a>
+          <a href="/cart.html">Корзина</a>
+        </nav>
+
+        <div class="auth-links">
+          <a href="https://x-54uc.onrender.com/login/">Войти</a>
+          <a href="https://x-54uc.onrender.com/signup/">Регистрация</a>
+          <a href="https://x-54uc.onrender.com/account/">Аккаунт</a>
+          <a href="https://x-54uc.onrender.com/logout/">Выйти</a>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="section collection">
+        <div class="container">
+          <div class="section-header">
+            <div>
+              <h2 class="section-title">Полный каталог</h2>
+              <p class="section-subtitle">
+                Все модели, которые сейчас доступны для заказа в Ташкенте. Если
+                не нашёл подходящие часы — напиши в Telegram @xamroz, можно
+                сделать подбор под заказ по фото.
+              </p>
+            </div>
+          </div>
+
+          <div class="collection-grid" id="catalog-grid"></div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="container footer-inner">
+        <div class="footer-left">
+          <div class="logo footer-logo">TIMEPIECE</div>
+          <p class="footer-text">
+            Актуальные модели из последних поставок. Для индивидуального подбора
+            — Telegram @xamroz · +998 94 662 83 08
+          </p>
+        </div>
+      </div>
+      <div class="footer-bottom mono">
+        © TIMEPIECE, 2025 · Все права защищены.
+      </div>
+    </footer>
+
+    <script>
+      /* ===== КОРЗИНА (localStorage) ===== */
+      function getCart() {
+        try {
+          return JSON.parse(localStorage.getItem("timepiece_cart") || "[]");
+        } catch {
+          return [];
+        }
+      }
+
+      function setCart(cart) {
+        localStorage.setItem("timepiece_cart", JSON.stringify(cart));
+      }
+
+      function addToCart(item) {
+        const cart = getCart();
+        const existing = cart.find((x) => x.id === item.id);
+
+        if (existing) {
+          existing.quantity += 1;
+        } else {
+          cart.push({
+            id: item.id,
+            name: item.name,
+            price: item.price || 0,
+            currency: item.currency || "",
+            image_url: item.image_url || "",
+            quantity: 1,
+          });
+        }
+
+        setCart(cart);
+        alert("Добавлено в корзину");
+      }
+
+      /* ===== ЗАГРУЗКА ЧАСОВ ===== */
+      async function loadWatches() {
+        try {
+          const response = await fetch(`${API_BASE}/api/watches/all/`);
+          if (!response.ok) throw new Error("API error");
+
+          const data = await response.json();
+          const grid = document.getElementById("catalog-grid");
+          grid.innerHTML = "";
+
+          data.items.forEach((item) => {
+            const price = new Intl.NumberFormat("ru-RU").format(
+              item.price || 0
+            );
+
+            const card = document.createElement("article");
+            card.className = "product-card glass-panel";
+
+            card.innerHTML = `
+              <div class="product-image">
+                <img src="${item.image_url}" class="product-photo" alt="">
+                <span class="mono product-tag">${item.tag || ""}</span>
+              </div>
+
+              <div class="product-body">
+                <h3 class="product-name">${item.name}</h3>
+                <p class="product-desc">${item.description || ""}</p>
+                <div class="product-meta">
+                  <span class="price">${item.currency} ${price}</span>
+                  <span class="badge">${item.badge || ""}</span>
+                </div>
+                <div class="product-actions">
+                  <button class="btn btn-primary btn-small buy-btn">
+                    Купить
+                  </button>
+                </div>
+              </div>
+            `;
+
+            card
+              .querySelector(".buy-btn")
+              .addEventListener("click", () => addToCart(item));
+
+            grid.appendChild(card);
+          });
+        } catch (e) {
+          console.error(e);
+          alert("Ошибка загрузки каталога");
+        }
+      }
+
+      document.addEventListener("DOMContentLoaded", loadWatches);
+    </script>
+  </body>
+</html>

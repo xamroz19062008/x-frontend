@@ -5,7 +5,6 @@
     <title>Корзина — TIMEPIECE</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <!-- ✅ CSS для Vercel -->
     <link rel="stylesheet" href="/css/style.css" />
 
     <link
@@ -15,8 +14,14 @@
     />
 
     <script>
-      // ✅ Render backend
       const API_BASE = "https://x-54uc.onrender.com";
+
+      function resolveImageUrl(url) {
+        if (!url) return "";
+        if (url.startsWith("http://") || url.startsWith("https://")) return url;
+        if (url.startsWith("/")) return API_BASE + url;
+        return API_BASE + "/" + url;
+      }
     </script>
   </head>
 
@@ -31,20 +36,22 @@
         </nav>
 
         <div class="auth-links" id="auth-links">
-          <a id="link-login" href="https://x-54uc.onrender.com/login/">Войти</a>
-          <a id="link-signup" href="https://x-54uc.onrender.com/signup/"
+          <a id="link-login" href="https://x-54uc.onrender.com/accounts/login/"
+            >Войти</a
+          >
+          <a id="link-signup" href="https://x-54uc.onrender.com/accounts/login/"
             >Регистрация</a
           >
 
           <a
             id="link-account"
-            href="https://x-54uc.onrender.com/account/"
+            href="https://x-54uc.onrender.com/accounts/login/"
             style="display: none"
             >Аккаунт</a
           >
           <a
             id="link-logout"
-            href="https://x-54uc.onrender.com/logout/"
+            href="https://x-54uc.onrender.com/accounts/logout/"
             style="display: none"
             >Выйти</a
           >
@@ -82,7 +89,6 @@
               Сумма заказа: <span id="cart-total">0</span> сум
             </div>
 
-            <!-- ===== ОФОРМЛЕНИЕ ===== -->
             <div class="checkout-block" style="margin-top: 40px">
               <h2 class="section-title" style="font-size: 24px">Оформление</h2>
 
@@ -124,7 +130,6 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <script>
-      /* ===== CART ===== */
       function getCart() {
         return JSON.parse(localStorage.getItem("timepiece_cart") || "[]");
       }
@@ -155,21 +160,25 @@
         let total = 0;
 
         cart.forEach((item, index) => {
-          const sum = item.price * item.quantity;
+          const sum = (item.price || 0) * (item.quantity || 0);
           total += sum;
 
           const tr = document.createElement("tr");
           tr.innerHTML = `
             <td>
               <div style="display:flex;gap:12px;align-items:center">
-                <img src="${item.image_url}" style="width:52px;height:52px;border-radius:12px;object-fit:cover">
-                <div>${item.name}</div>
+                <img
+                  src="${resolveImageUrl(item.image_url)}"
+                  style="width:52px;height:52px;border-radius:12px;object-fit:cover"
+                  alt=""
+                >
+                <div>${item.name || ""}</div>
               </div>
             </td>
-            <td>${item.price} сум</td>
+            <td>${item.price || 0} сум</td>
             <td>
               <button onclick="changeQty(${index}, -1)">−</button>
-              ${item.quantity}
+              ${item.quantity || 0}
               <button onclick="changeQty(${index}, 1)">+</button>
             </td>
             <td>${sum} сум</td>
@@ -194,7 +203,6 @@
         setCart(cart);
       }
 
-      /* ===== MAP ===== */
       let lat = null;
       let lng = null;
 
@@ -209,16 +217,12 @@
         lat = e.latlng.lat;
         lng = e.latlng.lng;
 
-        if (!marker) {
-          marker = L.marker([lat, lng]).addTo(map);
-        } else {
-          marker.setLatLng([lat, lng]);
-        }
+        if (!marker) marker = L.marker([lat, lng]).addTo(map);
+        else marker.setLatLng([lat, lng]);
 
         validateCheckout();
       });
 
-      /* ===== CHECKOUT ===== */
       const locationInput = document.getElementById("location");
       const phoneInput = document.getElementById("phone");
       const btn = document.getElementById("checkout-btn");
@@ -238,7 +242,7 @@
       btn.addEventListener("click", async () => {
         const cart = getCart();
 
-        const res = await fetch(`${API_BASE}/api/orders/create/`, {
+        const res = await fetch(`${API_BASE}/api/order/create/`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -255,12 +259,15 @@
           alert("Заказ успешно отправлен!");
           window.location.href = "/index.html";
         } else {
+          const text = await res.text().catch(() => "");
+          console.error("Order error:", res.status, text);
           alert("Ошибка оформления заказа");
         }
       });
 
       renderCart();
     </script>
+
     <script>
       function renderAuthLinks() {
         const isLogged = localStorage.getItem("tp_logged_in") === "1";
@@ -271,7 +278,6 @@
         document.getElementById("link-signup").style.display = isLogged
           ? "none"
           : "inline";
-
         document.getElementById("link-account").style.display = isLogged
           ? "inline"
           : "none";
@@ -280,19 +286,18 @@
           : "none";
       }
 
-      // Если вернулся с бэкенда после логина/регистрации: ?logged=1
       const params = new URLSearchParams(window.location.search);
       if (params.get("logged") === "1") {
         localStorage.setItem("tp_logged_in", "1");
-        // убираем параметр из адреса
         window.history.replaceState({}, "", window.location.pathname);
       }
 
-      // Если нажали "Выйти" — чистим флаг (переход на Django logout всё равно произойдет)
       const logoutLink = document.getElementById("link-logout");
-      logoutLink.addEventListener("click", () => {
-        localStorage.removeItem("tp_logged_in");
-      });
+      if (logoutLink) {
+        logoutLink.addEventListener("click", () => {
+          localStorage.removeItem("tp_logged_in");
+        });
+      }
 
       renderAuthLinks();
     </script>

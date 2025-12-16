@@ -5,10 +5,8 @@
     <title>TIMEPIECE — премиальные часы в Ташкенте</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <!-- Подключаем стили -->
     <link rel="stylesheet" href="/css/style.css" />
 
-    <!-- Шрифты -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -17,9 +15,14 @@
     />
 
     <script>
-      // ВАЖНО: поставь сюда свой Render домен
-      // пример: https://timepiece-backend.onrender.com
       const API_BASE = "https://x-54uc.onrender.com";
+
+      function resolveImageUrl(url) {
+        if (!url) return "";
+        if (url.startsWith("http://") || url.startsWith("https://")) return url;
+        if (url.startsWith("/")) return API_BASE + url;
+        return API_BASE + "/" + url;
+      }
     </script>
   </head>
 
@@ -40,25 +43,28 @@
             Перейти к часам
           </a>
 
-          <!-- На Vercel нет Django-сессии => показываем всегда эти ссылки -->
           <div class="auth-area">
             <div class="auth-links" id="auth-links">
-              <a id="link-login" href="https://x-54uc.onrender.com/login/"
+              <a
+                id="link-login"
+                href="https://x-54uc.onrender.com/accounts/login/"
                 >Войти</a
               >
-              <a id="link-signup" href="https://x-54uc.onrender.com/signup/"
+              <a
+                id="link-signup"
+                href="https://x-54uc.onrender.com/accounts/login/"
                 >Регистрация</a
               >
 
               <a
                 id="link-account"
-                href="https://x-54uc.onrender.com/account/"
+                href="https://x-54uc.onrender.com/accounts/login/"
                 style="display: none"
                 >Аккаунт</a
               >
               <a
                 id="link-logout"
-                href="https://x-54uc.onrender.com/logout/"
+                href="https://x-54uc.onrender.com/accounts/logout/"
                 style="display: none"
                 >Выйти</a
               >
@@ -69,7 +75,6 @@
     </header>
 
     <main id="top">
-      <!-- HERO -->
       <section class="hero">
         <div class="hero-background"></div>
 
@@ -144,7 +149,6 @@
         </div>
       </section>
 
-      <!-- FEATURES -->
       <section class="section features" id="service">
         <div class="container">
           <h2 class="section-title">Как я работаю</h2>
@@ -191,7 +195,6 @@
         </div>
       </section>
 
-      <!-- COLLECTION -->
       <section class="section collection" id="collection">
         <div class="container">
           <div class="section-header">
@@ -204,7 +207,6 @@
               </p>
             </div>
 
-            <!-- Для Vercel: ссылка на статическую страницу -->
             <a href="/catalog.html" class="btn btn-ghost btn-small">
               Полный каталог
             </a>
@@ -214,7 +216,6 @@
         </div>
       </section>
 
-      <!-- ABOUT -->
       <section class="section about" id="about">
         <div class="container about-inner glass-panel">
           <div class="about-text">
@@ -256,7 +257,6 @@
       </section>
     </main>
 
-    <!-- FOOTER -->
     <footer class="footer" id="contacts">
       <div class="container footer-inner">
         <div class="footer-left">
@@ -289,7 +289,6 @@
       </div>
     </footer>
 
-    <!-- JS: загрузка часов из Render API -->
     <script>
       function getCart() {
         try {
@@ -345,7 +344,9 @@
 
             card.innerHTML = `
               <div class="product-image">
-                <img src="${item.image_url || ""}" class="product-photo" alt="">
+                <img src="${resolveImageUrl(
+                  item.image_url
+                )}" class="product-photo" alt="">
                 <span class="mono product-tag">${item.tag || ""}</span>
               </div>
 
@@ -367,10 +368,7 @@
             `;
 
             const btn = card.querySelector(".buy-btn");
-            if (btn) {
-              btn.addEventListener("click", () => addToCart(item));
-            }
-
+            if (btn) btn.addEventListener("click", () => addToCart(item));
             grid.appendChild(card);
           });
         } catch (e) {
@@ -380,11 +378,11 @@
 
       async function loadHeroWatch() {
         try {
-          const response = await fetch(`${API_BASE}/api/watches/hero/`);
+          const response = await fetch(`${API_BASE}/api/watches/`);
           if (!response.ok) throw new Error("Failed to load hero watch");
 
           const data = await response.json();
-          const item = data.item;
+          const item = data.items && data.items[0] ? data.items[0] : null;
           if (!item) return;
 
           const nameEl = document.getElementById("hero-watch-name");
@@ -403,8 +401,9 @@
           }
 
           if (imgEl) {
-            if (item.image_url) {
-              imgEl.src = item.image_url;
+            const src = resolveImageUrl(item.image_url);
+            if (src) {
+              imgEl.src = src;
               imgEl.style.display = "block";
             } else {
               imgEl.style.display = "none";
@@ -417,9 +416,10 @@
 
       document.addEventListener("DOMContentLoaded", function () {
         loadHeroWatch();
-        loadWatches(`${API_BASE}/api/watches/featured/`, "collection-grid");
+        loadWatches(`${API_BASE}/api/watches/`, "collection-grid");
       });
     </script>
+
     <script>
       function renderAuthLinks() {
         const isLogged = localStorage.getItem("tp_logged_in") === "1";
@@ -430,7 +430,6 @@
         document.getElementById("link-signup").style.display = isLogged
           ? "none"
           : "inline";
-
         document.getElementById("link-account").style.display = isLogged
           ? "inline"
           : "none";
@@ -439,19 +438,18 @@
           : "none";
       }
 
-      // Если вернулся с бэкенда после логина/регистрации: ?logged=1
       const params = new URLSearchParams(window.location.search);
       if (params.get("logged") === "1") {
         localStorage.setItem("tp_logged_in", "1");
-        // убираем параметр из адреса
         window.history.replaceState({}, "", window.location.pathname);
       }
 
-      // Если нажали "Выйти" — чистим флаг (переход на Django logout всё равно произойдет)
       const logoutLink = document.getElementById("link-logout");
-      logoutLink.addEventListener("click", () => {
-        localStorage.removeItem("tp_logged_in");
-      });
+      if (logoutLink) {
+        logoutLink.addEventListener("click", () => {
+          localStorage.removeItem("tp_logged_in");
+        });
+      }
 
       renderAuthLinks();
     </script>

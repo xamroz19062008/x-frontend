@@ -5,7 +5,6 @@
     <title>TIMEPIECE — полный каталог часов в Ташкенте</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <!-- ✅ CSS для Vercel -->
     <link rel="stylesheet" href="/css/style.css" />
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -16,8 +15,14 @@
     />
 
     <script>
-      // ✅ ТВОЙ Render backend
       const API_BASE = "https://x-54uc.onrender.com";
+
+      function resolveImageUrl(url) {
+        if (!url) return "";
+        if (url.startsWith("http://") || url.startsWith("https://")) return url;
+        if (url.startsWith("/")) return API_BASE + url;
+        return API_BASE + "/" + url;
+      }
     </script>
   </head>
 
@@ -35,20 +40,22 @@
         </nav>
 
         <div class="auth-links" id="auth-links">
-          <a id="link-login" href="https://x-54uc.onrender.com/login/">Войти</a>
-          <a id="link-signup" href="https://x-54uc.onrender.com/signup/"
+          <a id="link-login" href="https://x-54uc.onrender.com/accounts/login/"
+            >Войти</a
+          >
+          <a id="link-signup" href="https://x-54uc.onrender.com/accounts/login/"
             >Регистрация</a
           >
 
           <a
             id="link-account"
-            href="https://x-54uc.onrender.com/account/"
+            href="https://x-54uc.onrender.com/accounts/login/"
             style="display: none"
             >Аккаунт</a
           >
           <a
             id="link-logout"
-            href="https://x-54uc.onrender.com/logout/"
+            href="https://x-54uc.onrender.com/accounts/logout/"
             style="display: none"
             >Выйти</a
           >
@@ -91,7 +98,6 @@
     </footer>
 
     <script>
-      /* ===== КОРЗИНА (localStorage) ===== */
       function getCart() {
         try {
           return JSON.parse(localStorage.getItem("timepiece_cart") || "[]");
@@ -125,10 +131,9 @@
         alert("Добавлено в корзину");
       }
 
-      /* ===== ЗАГРУЗКА ЧАСОВ ===== */
       async function loadWatches() {
         try {
-          const response = await fetch(`${API_BASE}/api/watches/all/`);
+          const response = await fetch(`${API_BASE}/api/watches/`);
           if (!response.ok) throw new Error("API error");
 
           const data = await response.json();
@@ -145,19 +150,21 @@
 
             card.innerHTML = `
               <div class="product-image">
-                <img src="${item.image_url}" class="product-photo" alt="">
+                <img src="${resolveImageUrl(
+                  item.image_url
+                )}" class="product-photo" alt="">
                 <span class="mono product-tag">${item.tag || ""}</span>
               </div>
 
               <div class="product-body">
-                <h3 class="product-name">${item.name}</h3>
+                <h3 class="product-name">${item.name || ""}</h3>
                 <p class="product-desc">${item.description || ""}</p>
                 <div class="product-meta">
-                  <span class="price">${item.currency} ${price}</span>
+                  <span class="price">${item.currency || ""} ${price}</span>
                   <span class="badge">${item.badge || ""}</span>
                 </div>
                 <div class="product-actions">
-                  <button class="btn btn-primary btn-small buy-btn">
+                  <button class="btn btn-primary btn-small buy-btn" type="button">
                     Купить
                   </button>
                 </div>
@@ -167,7 +174,6 @@
             card
               .querySelector(".buy-btn")
               .addEventListener("click", () => addToCart(item));
-
             grid.appendChild(card);
           });
         } catch (e) {
@@ -178,6 +184,7 @@
 
       document.addEventListener("DOMContentLoaded", loadWatches);
     </script>
+
     <script>
       function renderAuthLinks() {
         const isLogged = localStorage.getItem("tp_logged_in") === "1";
@@ -188,7 +195,6 @@
         document.getElementById("link-signup").style.display = isLogged
           ? "none"
           : "inline";
-
         document.getElementById("link-account").style.display = isLogged
           ? "inline"
           : "none";
@@ -197,19 +203,18 @@
           : "none";
       }
 
-      // Если вернулся с бэкенда после логина/регистрации: ?logged=1
       const params = new URLSearchParams(window.location.search);
       if (params.get("logged") === "1") {
         localStorage.setItem("tp_logged_in", "1");
-        // убираем параметр из адреса
         window.history.replaceState({}, "", window.location.pathname);
       }
 
-      // Если нажали "Выйти" — чистим флаг (переход на Django logout всё равно произойдет)
       const logoutLink = document.getElementById("link-logout");
-      logoutLink.addEventListener("click", () => {
-        localStorage.removeItem("tp_logged_in");
-      });
+      if (logoutLink) {
+        logoutLink.addEventListener("click", () => {
+          localStorage.removeItem("tp_logged_in");
+        });
+      }
 
       renderAuthLinks();
     </script>

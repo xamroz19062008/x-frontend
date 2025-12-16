@@ -50,15 +50,13 @@
                 href="https://x-54uc.onrender.com/accounts/login/"
                 >Войти</a
               >
-              <a
-                id="link-signup"
-                href="https://x-54uc.onrender.com/accounts/login/"
+              <a id="link-signup" href="https://x-54uc.onrender.com/signup/"
                 >Регистрация</a
               >
 
               <a
                 id="link-account"
-                href="https://x-54uc.onrender.com/accounts/login/"
+                href="https://x-54uc.onrender.com/account/"
                 style="display: none"
                 >Аккаунт</a
               >
@@ -129,6 +127,7 @@
                   class="hero-watch-photo"
                   src=""
                   alt=""
+                  style="display: none"
                 />
               </div>
               <div class="watch-info">
@@ -326,7 +325,7 @@
       async function loadWatches(url, containerId) {
         try {
           const response = await fetch(url);
-          if (!response.ok) throw new Error("Failed to load watches");
+          if (!response.ok) throw new Error("Failed to load watches: " + url);
 
           const data = await response.json();
           const grid = document.getElementById(containerId);
@@ -334,7 +333,7 @@
 
           grid.innerHTML = "";
 
-          data.items.forEach((item) => {
+          (data.items || []).forEach((item) => {
             const card = document.createElement("article");
             card.className = "product-card glass-panel";
 
@@ -377,6 +376,17 @@
       }
 
       async function loadHeroWatch() {
+        // 1) пробуем hero endpoint
+        try {
+          const r = await fetch(`${API_BASE}/api/watches/hero/`);
+          if (r.ok) {
+            const d = await r.json();
+            const item = d && d.item ? d.item : null; // если ваш hero_watch отдаёт {item: {...}}
+            if (item) return applyHero(item);
+          }
+        } catch (_) {}
+
+        // 2) fallback: берём первый из all
         try {
           const response = await fetch(`${API_BASE}/api/watches/all/`);
           if (!response.ok) throw new Error("Failed to load hero watch");
@@ -385,38 +395,46 @@
           const item = data.items && data.items[0] ? data.items[0] : null;
           if (!item) return;
 
-          const nameEl = document.getElementById("hero-watch-name");
-          const descEl = document.getElementById("hero-watch-desc");
-          const priceEl = document.getElementById("hero-watch-price");
-          const imgEl = document.getElementById("hero-watch-image");
-
-          if (nameEl) nameEl.textContent = item.name || "";
-          if (descEl) descEl.textContent = item.description || "";
-
-          if (priceEl) {
-            const formattedPrice = new Intl.NumberFormat("ru-RU").format(
-              item.price || 0
-            );
-            priceEl.textContent = `${item.currency || ""} ${formattedPrice}`;
-          }
-
-          if (imgEl) {
-            const src = resolveImageUrl(item.image_url);
-            if (src) {
-              imgEl.src = src;
-              imgEl.style.display = "block";
-            } else {
-              imgEl.style.display = "none";
-            }
-          }
+          applyHero(item);
         } catch (e) {
           console.error(e);
         }
       }
 
+      function applyHero(item) {
+        const nameEl = document.getElementById("hero-watch-name");
+        const descEl = document.getElementById("hero-watch-desc");
+        const priceEl = document.getElementById("hero-watch-price");
+        const imgEl = document.getElementById("hero-watch-image");
+        const refEl = document.getElementById("hero-watch-ref");
+
+        if (refEl) refEl.textContent = item.tag || "";
+        if (nameEl) nameEl.textContent = item.name || "";
+        if (descEl) descEl.textContent = item.description || "";
+
+        if (priceEl) {
+          const formattedPrice = new Intl.NumberFormat("ru-RU").format(
+            item.price || 0
+          );
+          priceEl.textContent = `${item.currency || ""} ${formattedPrice}`;
+        }
+
+        if (imgEl) {
+          const src = resolveImageUrl(item.image_url);
+          if (src) {
+            imgEl.src = src;
+            imgEl.style.display = "block";
+          } else {
+            imgEl.style.display = "none";
+          }
+        }
+      }
+
       document.addEventListener("DOMContentLoaded", function () {
         loadHeroWatch();
-        loadWatches(`${API_BASE}/api/watches/`, "collection-grid");
+
+        // ВАЖНО: у вас /api/watches/ = 404, поэтому берём featured
+        loadWatches(`${API_BASE}/api/watches/featured/`, "collection-grid");
       });
     </script>
 

@@ -15,12 +15,31 @@
 
     <script>
       const API_BASE = "https://x-54uc.onrender.com";
+      const FRONTEND_BASE = "https://x-frontend-xi.vercel.app";
 
       function resolveImageUrl(url) {
         if (!url) return "";
         if (url.startsWith("http://") || url.startsWith("https://")) return url;
         if (url.startsWith("/")) return API_BASE + url;
         return API_BASE + "/" + url;
+      }
+
+      // Добавил: выставляем правильные ссылки авторизации
+      function initAuthLinks() {
+        const loginLink = document.getElementById("link-login");
+        const signupLink = document.getElementById("link-signup");
+        const accountLink = document.getElementById("link-account");
+        const logoutLink = document.getElementById("link-logout");
+
+        const returnUrl = `${FRONTEND_BASE}${window.location.pathname}?logged=1`;
+        const loginUrl = `${API_BASE}/accounts/login/?next=${encodeURIComponent(
+          returnUrl
+        )}`;
+
+        if (loginLink) loginLink.href = loginUrl;
+        if (signupLink) signupLink.href = `${API_BASE}/signup/`;
+        if (accountLink) accountLink.href = `${API_BASE}/account/`;
+        if (logoutLink) logoutLink.href = `${API_BASE}/accounts/logout/`;
       }
     </script>
   </head>
@@ -36,25 +55,11 @@
         </nav>
 
         <div class="auth-links" id="auth-links">
-          <a id="link-login" href="https://x-54uc.onrender.com/accounts/login/"
-            >Войти</a
-          >
-          <a id="link-signup" href="https://x-54uc.onrender.com/accounts/login/"
-            >Регистрация</a
-          >
+          <a id="link-login" href="#">Войти</a>
+          <a id="link-signup" href="#">Регистрация</a>
 
-          <a
-            id="link-account"
-            href="https://x-54uc.onrender.com/accounts/login/"
-            style="display: none"
-            >Аккаунт</a
-          >
-          <a
-            id="link-logout"
-            href="https://x-54uc.onrender.com/accounts/logout/"
-            style="display: none"
-            >Выйти</a
-          >
+          <a id="link-account" href="#" style="display: none">Аккаунт</a>
+          <a id="link-logout" href="#" style="display: none">Выйти</a>
         </div>
       </div>
     </header>
@@ -242,7 +247,8 @@
       btn.addEventListener("click", async () => {
         const cart = getCart();
 
-        const res = await fetch(`${API_BASE}/api/order/create/`, {
+        // ВАЖНО: исправил endpoint на правильный (как у тебя в Django urls)
+        const res = await fetch(`${API_BASE}/api/orders/create/`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -299,6 +305,8 @@
         });
       }
 
+      // добавил: сначала ставим правильные ссылки, потом рендерим кнопки
+      initAuthLinks();
       renderAuthLinks();
     </script>
   </body>

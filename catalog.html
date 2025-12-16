@@ -16,12 +16,35 @@
 
     <script>
       const API_BASE = "https://x-54uc.onrender.com";
+      const FRONTEND_BASE = "https://x-frontend-xi.vercel.app";
 
       function resolveImageUrl(url) {
         if (!url) return "";
         if (url.startsWith("http://") || url.startsWith("https://")) return url;
         if (url.startsWith("/")) return API_BASE + url;
         return API_BASE + "/" + url;
+      }
+
+      // Ставим правильные ссылки авторизации:
+      // - login: редиректит назад на эту страницу с ?logged=1
+      // - signup: /signup/
+      // - account: /account/
+      // - logout: /accounts/logout/ (после logout можно руками вернуться на фронт)
+      function initAuthLinks() {
+        const loginLink = document.getElementById("link-login");
+        const signupLink = document.getElementById("link-signup");
+        const accountLink = document.getElementById("link-account");
+        const logoutLink = document.getElementById("link-logout");
+
+        const returnUrl = `${FRONTEND_BASE}${window.location.pathname}?logged=1`;
+        const loginUrl = `${API_BASE}/accounts/login/?next=${encodeURIComponent(
+          returnUrl
+        )}`;
+
+        if (loginLink) loginLink.href = loginUrl;
+        if (signupLink) signupLink.href = `${API_BASE}/signup/`;
+        if (accountLink) accountLink.href = `${API_BASE}/account/`;
+        if (logoutLink) logoutLink.href = `${API_BASE}/accounts/logout/`;
       }
     </script>
   </head>
@@ -40,25 +63,11 @@
         </nav>
 
         <div class="auth-links" id="auth-links">
-          <a id="link-login" href="https://x-54uc.onrender.com/accounts/login/"
-            >Войти</a
-          >
-          <a id="link-signup" href="https://x-54uc.onrender.com/accounts/login/"
-            >Регистрация</a
-          >
+          <a id="link-login" href="#">Войти</a>
+          <a id="link-signup" href="#">Регистрация</a>
 
-          <a
-            id="link-account"
-            href="https://x-54uc.onrender.com/accounts/login/"
-            style="display: none"
-            >Аккаунт</a
-          >
-          <a
-            id="link-logout"
-            href="https://x-54uc.onrender.com/accounts/logout/"
-            style="display: none"
-            >Выйти</a
-          >
+          <a id="link-account" href="#" style="display: none">Аккаунт</a>
+          <a id="link-logout" href="#" style="display: none">Выйти</a>
         </div>
       </div>
     </header>
@@ -97,6 +106,7 @@
       </div>
     </footer>
 
+    <!-- ===== ТВОИ ФУНКЦИИ КОРЗИНЫ — НЕ ТРОГАЛ ===== -->
     <script>
       function getCart() {
         try {
@@ -139,6 +149,11 @@
           const data = await response.json();
           const grid = document.getElementById("catalog-grid");
           grid.innerHTML = "";
+
+          if (!data.items || data.items.length === 0) {
+            grid.innerHTML = "<p style='opacity:.8'>Товары не найдены</p>";
+            return;
+          }
 
           data.items.forEach((item) => {
             const price = new Intl.NumberFormat("ru-RU").format(
@@ -185,6 +200,7 @@
       document.addEventListener("DOMContentLoaded", loadWatches);
     </script>
 
+    <!-- ===== ТВОЯ ЛОГИКА AUTH UI — НЕ УДАЛЯЛ, ТОЛЬКО ДОБАВИЛ initAuthLinks() ===== -->
     <script>
       function renderAuthLinks() {
         const isLogged = localStorage.getItem("tp_logged_in") === "1";
@@ -203,6 +219,7 @@
           : "none";
       }
 
+      // если вернулись с бекенда после логина
       const params = new URLSearchParams(window.location.search);
       if (params.get("logged") === "1") {
         localStorage.setItem("tp_logged_in", "1");
@@ -216,6 +233,8 @@
         });
       }
 
+      // ВАЖНО: сначала выставляем правильные href, потом рендерим кнопки
+      initAuthLinks();
       renderAuthLinks();
     </script>
   </body>

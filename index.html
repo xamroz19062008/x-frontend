@@ -378,7 +378,7 @@
 
       async function loadHeroWatch() {
         try {
-          const response = await fetch(`${API_BASE}/api/watches/`);
+          const response = await fetch(`${API_BASE}/api/watches/all/`);
           if (!response.ok) throw new Error("Failed to load hero watch");
 
           const data = await response.json();

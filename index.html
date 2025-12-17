@@ -429,7 +429,48 @@
           }
         }
       }
+      async function loadHeroWatch() {
+        try {
+          const response = await fetch(`${API_BASE}/api/watches/hero/`);
+          if (!response.ok) throw new Error("Failed to load hero watch");
 
+          const data = await response.json();
+          const item = data.item;
+          if (!item) return;
+
+          const nameEl = document.getElementById("hero-watch-name");
+          const descEl = document.getElementById("hero-watch-desc");
+          const priceEl = document.getElementById("hero-watch-price");
+          const imgEl = document.getElementById("hero-watch-image");
+
+          if (nameEl) nameEl.textContent = item.name || "";
+          if (descEl) descEl.textContent = item.description || "";
+
+          if (priceEl) {
+            const formattedPrice = new Intl.NumberFormat("ru-RU").format(
+              item.price || 0
+            );
+            priceEl.textContent = `${item.currency || ""} ${formattedPrice}`;
+          }
+
+          if (imgEl) {
+            const src = resolveImageUrl(item.image_url);
+            if (src) {
+              imgEl.src = src;
+              imgEl.style.display = "block";
+            } else {
+              imgEl.style.display = "none";
+            }
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
+      document.addEventListener("DOMContentLoaded", function () {
+        loadHeroWatch();
+        loadWatches(`${API_BASE}/api/watches/featured/`, "collection-grid");
+      });
       document.addEventListener("DOMContentLoaded", function () {
         loadHeroWatch();
 
